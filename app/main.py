@@ -10,7 +10,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from .ai import classify_intent, generate_reply
-from .billing import ensure_recurring_charge, issue_usage_charge_if_needed
+from .billing import (
+    activate_recurring_charge,
+    ensure_recurring_charge,
+    issue_usage_charge_if_needed,
+)
 from .email_service import send_email_smtp
 from .models import Base, Merchant, Plan, Ticket, Usage
 from .shopify_api import (
@@ -78,8 +82,14 @@ def callback(request: Request, db: Session = Depends(get_db)) -> RedirectRespons
         merchant.access_token = access_token
     db.commit()
 
-    charge_url = ensure_recurring_charge(shop, access_token, plan=merchant.plan)
-    redirect_target = charge_url or f"{APP_URL}/dashboard?shop={shop}"
+    charge = ensure_recurring_charge(shop, access_token, plan=merchant.plan)
+    confirmation_url = None
+    if charge:
+        merchant.pending_recurring_charge_id = charge.get("id")
+        db.commit()
+        confirmation_url = charge.get("confirmation_url")
+
+    redirect_target = confirmation_url or f"{APP_URL}/dashboard?shop={shop}"
     return RedirectResponse(redirect_target)
 
 
@@ -250,3 +260,21 @@ def run_billing(shop: str, db: Session = Depends(get_db)) -> dict:
 
     issue_usage_charge_if_needed(db, merchant=merchant)
     return {"ok": True}
+
+
+@app.get("/billing/activated")
+def billing_activated(shop: str, charge_id: int, db: Session = Depends(get_db)):
+    merchant = db.query(Merchant).filter(Merchant.shop == shop).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+
+    if merchant.pending_recurring_charge_id and merchant.pending_recurring_charge_id != charge_id:
+        raise HTTPException(status_code=400, detail="Charge ID mismatch")
+
+    activate_recurring_charge(shop=merchant.shop, token=merchant.access_token, charge_id=charge_id)
+
+    merchant.recurring_charge_id = charge_id
+    merchant.pending_recurring_charge_id = None
+    db.commit()
+
+    return RedirectResponse(f"{APP_URL}/dashboard?shop={shop}")

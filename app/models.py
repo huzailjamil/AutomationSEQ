@@ -35,6 +35,8 @@ class Merchant(Base):
     access_token = Column(Text, nullable=False)
     plan = Column(Enum(Plan), default=Plan.BASIC, nullable=False)
     email_connected = Column(Boolean, default=False)
+    pending_recurring_charge_id = Column(Integer)
+    recurring_charge_id = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     usage = relationship("Usage", back_populates="merchant", cascade="all, delete-orphan")

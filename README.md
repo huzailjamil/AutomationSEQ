@@ -7,6 +7,7 @@ This repository contains a FastAPI scaffold for a public Shopify app that automa
 - Public Shopify OAuth flow (`/install` and `/callback`).
 - Usage tracking per merchant with quota enforcement and soft blocking once limits are reached.
 - Usage-based billing helpers for recurring charges and overage usage charges.
+- Billing activation callback that records the accepted Shopify recurring charge.
 - Email webhook endpoint that classifies intents, looks up Shopify orders, performs simple automations, and generates AI replies.
 - Spam filtering so unwanted messages do not count against quotas.
 - Dashboard-ready JSON endpoints for usage stats and ticket history.
@@ -53,13 +54,13 @@ README.md
    uvicorn app.main:app --reload --port 8000
    ```
 
-5. Expose the server over HTTPS (e.g., `ngrok http 8000`) and configure your Shopify Partner app settings with the callback URL `https://<your-domain>/callback`.
+5. Expose the server over HTTPS (e.g., `ngrok http 8000`) and configure your Shopify Partner app settings with the callback URL `https://<your-domain>/callback` and billing return URL `https://<your-domain>/billing/activated`.
 
 6. Forward support emails to the `/emails/webhook` endpoint or integrate with Gmail/Outlook polling. The endpoint will classify the message, check quota, fetch Shopify context, send a reply, and log the interaction.
 
 ## Next Steps
 
-- Store the activated `recurring_charge_id` to support real usage-based billing.
+- Build a lightweight dashboard (or marketing page) at `/dashboard` to handle the redirects after billing activation.
 - Replace the SMTP helper with Gmail API or Microsoft Graph integrations per merchant.
 - Add authentication for dashboard endpoints and build a frontend (React/Next.js, etc.).
 - Implement robust error handling, observability, and retry logic for Shopify actions.
