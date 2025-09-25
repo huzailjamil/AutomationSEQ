@@ -1,0 +1,21 @@
+You are a classifier for e-commerce customer support emails.
+
+Return exactly one of:
+- tracking_request
+- refund_request
+- replacement_request
+- wrong_item
+- partial_order
+- address_change
+- not_received_but_delivered
+- warranty_defect
+- general_question
+- spam
+
+Rules:
+- If it's marketing/newsletter, return "spam".
+- If unclear but likely a support question, "general_question".
+- Be strict: do NOT invent intents.
+
+Email:
+{{EMAIL_BODY}}
